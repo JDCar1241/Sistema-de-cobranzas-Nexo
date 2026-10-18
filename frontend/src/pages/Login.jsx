@@ -14,15 +14,43 @@ const CRONOGRAMA = [
   { dia: 120, estado: 'Pendiente', clase: 'pendiente' },
 ];
 
+// Mensaje genérico: no revela si el correo existe o si falló la contraseña.
+function textoError(err) {
+  const m = String(err?.message || '').toLowerCase();
+  if (/invalid|credencial|incorrect|contrase|password/.test(m)) {
+    return 'Correo o contraseña incorrectos.';
+  }
+  if (/network|fetch|conexi/.test(m)) {
+    return 'No se pudo conectar. Revisa tu internet e intenta de nuevo.';
+  }
+  return err?.message || 'No se pudo iniciar sesión. Intenta de nuevo.';
+}
+
 export default function Login() {
   const { perfil, cargando, aviso, login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [verPassword, setVerPassword] = useState(false);
+  const [mayusculas, setMayusculas] = useState(false);
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
 
   if (!cargando && perfil) return <Navigate to="/" replace />;
+
+  if (cargando && !enviando) {
+    return (
+      <div className="lg-carga" role="status" aria-live="polite">
+        <Logo tamano={48} />
+        <span className="suave">Cargando…</span>
+      </div>
+    );
+  }
+
+  const detectarMayusculas = (e) => {
+    if (typeof e.getModifierState === 'function') {
+      setMayusculas(e.getModifierState('CapsLock'));
+    }
+  };
 
   const enviar = async (e) => {
     e.preventDefault();
@@ -35,7 +63,7 @@ export default function Login() {
     try {
       await login(email.trim(), password);
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
     } finally {
       setEnviando(false);
     }
@@ -55,76 +83,92 @@ export default function Login() {
             de pagos desde un solo lugar.
           </p>
 
-          <ol className="lg-cronograma">
-            {CRONOGRAMA.map((c) => (
-              <li key={c.dia} className={`lg-cuota lg-${c.clase}`}>
-                <span className="lg-punto" />
-                <span className="lg-cuota-dia">Día {c.dia}</span>
-                <span className="lg-cuota-estado">{c.estado}</span>
-              </li>
-            ))}
-          </ol>
+          <div className="lg-card-cron">
+            <p className="lg-card-tit">Ejemplo de cronograma, una cuota cada 30 días</p>
+            <ol className="lg-cronograma">
+              {CRONOGRAMA.map((c) => (
+                <li key={c.dia} className={`lg-cuota lg-${c.clase}`}>
+                  <span className="lg-punto" />
+                  <span className="lg-cuota-dia">Día {c.dia}</span>
+                  <span className="lg-cuota-estado">{c.estado}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
 
         <p className="lg-sedes">Sedes: {SEDES.join(', ')}</p>
       </aside>
 
       <main className="lg-panel">
-        <form className="lg-form" onSubmit={enviar} noValidate>
-          <Logo className="lg-logo-movil" tamano={40} />
-          <h1>Inicia sesión</h1>
-          <p className="suave lg-sub">Accede con tu cuenta del personal.</p>
+        <div className="lg-centro">
+          <form className="lg-form" onSubmit={enviar} noValidate>
+            <Logo className="lg-logo-movil" tamano={40} />
+            <h1>Inicia sesión</h1>
+            <p className="suave lg-sub">Accede con tu cuenta del personal.</p>
 
-          <div className="campo">
-            <label htmlFor="email">Correo</label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="username"
-              placeholder="nombre@empresa.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoFocus
-            />
-          </div>
-
-          <div className="campo">
-            <label htmlFor="password">Contraseña</label>
-            <div className="lg-pass">
+            <div className="campo">
+              <label htmlFor="email">Correo</label>
               <input
-                id="password"
-                type={verPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                id="email"
+                type="email"
+                autoComplete="username"
+                placeholder="nombre@empresa.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoFocus
               />
-              <button
-                type="button"
-                className="lg-ver"
-                onClick={() => setVerPassword((v) => !v)}
-                aria-pressed={verPassword}
-                aria-label={verPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-              >
-                {verPassword ? 'Ocultar' : 'Mostrar'}
-              </button>
             </div>
-          </div>
 
-          {mensaje && (
-            <p className="lg-error" role="alert">
-              {mensaje}
+            <div className="campo">
+              <label htmlFor="password">Contraseña</label>
+              <div className="lg-pass">
+                <input
+                  id="password"
+                  type={verPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={detectarMayusculas}
+                  onKeyUp={detectarMayusculas}
+                  onBlur={() => setMayusculas(false)}
+                />
+                <button
+                  type="button"
+                  className="lg-ver"
+                  onClick={() => setVerPassword((v) => !v)}
+                  aria-pressed={verPassword}
+                  aria-label={verPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  {verPassword ? 'Ocultar' : 'Mostrar'}
+                </button>
+              </div>
+              {mayusculas && (
+                <p className="lg-aviso" role="status">
+                  Bloq Mayús está activado.
+                </p>
+              )}
+            </div>
+
+            {mensaje && (
+              <p className="lg-error" role="alert">
+                {mensaje}
+              </p>
+            )}
+
+            <button type="submit" className="btn lg-enviar" disabled={enviando}>
+              {enviando ? 'Ingresando…' : 'Iniciar sesión'}
+            </button>
+
+            <p className="chico suave lg-nota">
+              ¿No puedes ingresar? Pide a un administrador que revise tu cuenta.
             </p>
-          )}
+          </form>
+        </div>
 
-          <button type="submit" className="btn lg-enviar" disabled={enviando}>
-            {enviando ? 'Ingresando…' : 'Iniciar sesión'}
-          </button>
-
-          <p className="chico suave lg-pie">
-            ¿No puedes ingresar? Pide a un administrador que revise tu cuenta.
-          </p>
-        </form>
-
+        <footer className="lg-pie-pagina">
+          Nexo · Norte del Perú · {new Date().getFullYear()}
+        </footer>
       </main>
     </div>
   );

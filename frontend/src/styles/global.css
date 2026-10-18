@@ -54,15 +54,17 @@ p { margin: 0 0 1rem; }
   height: 100vh;
 }
 .marca { display: flex; flex-direction: column; padding: 0 .75rem 1.25rem; }
-.marca strong { font-size: 1.5rem; font-weight: 600; letter-spacing: -.02em; }
-.marca span { font-size: .8rem; color: #9fb0bb; }
+.marca-sub { font-size: .8rem; color: #9fb0bb; margin-top: .35rem; }
 
 .menu { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow-y: auto; }
 .menu a {
+  display: flex; align-items: center; gap: .7rem;
   color: #cfd9df; text-decoration: none;
   padding: .55rem .75rem; border-radius: var(--radio);
   transition: background .12s;
 }
+.menu a svg { flex: none; opacity: .85; }
+.menu a.active svg { opacity: 1; }
 .menu a:hover { background: var(--tinta-2); }
 .menu a.active { background: var(--acento); color: #fff; }
 
@@ -230,17 +232,6 @@ input:disabled { background: #f3f5f6; color: var(--suave); }
 .prestamo-cod { font-weight: 600; }
 .tabla-interna { margin: 0 1.1rem 1.1rem; box-shadow: none; }
 
-/* ---------- login ---------- */
-.login { min-height: 100vh; display: grid; place-items: center; padding: 1rem; }
-.login-caja {
-  width: 100%; max-width: 380px; background: var(--superficie);
-  border: 1px solid var(--borde); border-radius: 10px; padding: 2rem;
-  box-shadow: var(--sombra);
-}
-.login-marca { display: flex; flex-direction: column; margin-bottom: 1.5rem; }
-.login-marca strong { font-size: 1.9rem; font-weight: 600; letter-spacing: -.02em; color: var(--tinta); }
-.login-marca span { color: var(--suave); }
-
 /* ---------- móvil ---------- */
 @media (max-width: 800px) {
   .app { grid-template-columns: 1fr; }
@@ -255,6 +246,7 @@ input:disabled { background: #f3f5f6; color: var(--suave); }
   .acciones .btn-auto { flex: 1; }
   .resumen { grid-template-columns: 1fr 1fr; }
 }
+
 /* ---------- préstamos ---------- */
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 1rem; }
 .resumen-3 { grid-template-columns: repeat(3, 1fr); }
@@ -287,44 +279,8 @@ input:disabled { background: #f3f5f6; color: var(--suave); }
   .grid-3, .resumen-3 { grid-template-columns: 1fr; }
   .cupo { text-align: left; }
 }
-/* ---------- pantalla de éxito ---------- */
-.exito {
-  max-width: 560px; margin: 1rem auto 0; text-align: center;
-  background: var(--superficie); border: 1px solid var(--borde);
-  border-radius: 12px; padding: 2rem 1.75rem; box-shadow: var(--sombra);
-}
-.exito h1 { margin-bottom: .15rem; }
-.exito-icono {
-  width: 56px; height: 56px; margin: 0 auto 1rem; border-radius: 50%;
-  display: grid; place-items: center; font-size: 1.7rem; font-weight: 600;
-  background: var(--ok-claro); color: var(--ok); border: 2px solid #b7e2c8;
-}
-.exito-codigo {
-  display: inline-block; margin: .5rem 0 .75rem; padding: .35rem 1rem;
-  font-size: 1.2rem; font-weight: 600; letter-spacing: .04em;
-  background: var(--acento-claro); color: var(--acento-osc);
-  border-radius: 999px;
-}
-.exito-cliente { display: flex; flex-direction: column; margin-bottom: 1.25rem; }
 
-.exito-datos {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem;
-  margin: 0 0 1.5rem; text-align: left;
-}
-.exito-datos > div {
-  background: var(--fondo); border-radius: var(--radio); padding: .65rem .8rem;
-}
-.exito-datos dt { font-size: .78rem; color: var(--suave); }
-.exito-datos dd { margin: 0; font-weight: 600; }
-.exito-datos .destacado { background: var(--acento); }
-.exito-datos .destacado dt { color: #cfe8e3; }
-.exito-datos .destacado dd { color: #fff; font-size: 1.1rem; }
-
-.exito-acciones { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; }
-
-@media (max-width: 800px) {
-  .exito-datos { grid-template-columns: 1fr 1fr; }
-}/* ---------- utilidades nuevas ---------- */
+/* ---------- utilidades nuevas ---------- */
 .btn-enlace {
   background: none; border: 0; padding: 0; font: inherit; font-size: .88rem;
   color: var(--acento); cursor: pointer; text-decoration: underline;
@@ -407,6 +363,7 @@ input:disabled { background: #f3f5f6; color: var(--suave); }
 @media (max-width: 800px) {
   .exito-datos, .constancia-datos { grid-template-columns: 1fr 1fr; }
 }
+
 /* ---------- inicio ---------- */
 .inicio { max-width: 1200px; }
 

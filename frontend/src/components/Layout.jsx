@@ -1,6 +1,8 @@
 ﻿import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { rutasDeMenu, ETIQUETA_ROL } from '../config/rutas.js';
+import Logo from './Logo.jsx';
+import Icono, { ICONO_RUTA } from './Icono.jsx';
 
 export default function Layout() {
   const { perfil, logout } = useAuth();
@@ -9,14 +11,20 @@ export default function Layout() {
     <div className="app">
       <aside className="lateral">
         <div className="marca">
-          <strong>Nexo</strong>
-          <span>Cobranzas y préstamos</span>
+          <Logo claro tamano={34} />
+          <span className="marca-sub">Cobranzas y préstamos</span>
         </div>
 
         <nav className="menu" aria-label="Principal">
-          <NavLink to="/" end>Inicio</NavLink>
+          <NavLink to="/" end>
+            <Icono n="home" size={18} />
+            <span>Inicio</span>
+          </NavLink>
           {rutasDeMenu(perfil.rol).map((r) => (
-            <NavLink key={r.path} to={`/${r.path}`}>{r.titulo}</NavLink>
+            <NavLink key={r.path} to={`/${r.path}`}>
+              <Icono n={ICONO_RUTA[r.path]} size={18} />
+              <span>{r.titulo}</span>
+            </NavLink>
           ))}
         </nav>
 

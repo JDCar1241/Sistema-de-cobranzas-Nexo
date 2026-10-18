@@ -1,0 +1,129 @@
+/* ---------- login ---------- */
+.lg-pagina {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(320px, 4fr) 6fr;
+}
+
+/* Panel de marca */
+.lg-marca {
+  background: var(--tinta);
+  color: #e6ecf0;
+  padding: 2.5rem 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2rem;
+}
+.lg-mensaje { max-width: 380px; }
+.lg-mensaje h2 {
+  font-size: 2rem;
+  line-height: 1.15;
+  letter-spacing: -.02em;
+  color: #fff;
+  margin: 0 0 .9rem;
+}
+.lg-mensaje p { color: #9fb0bb; margin: 0 0 2rem; }
+
+/* Cronograma ilustrativo: cuotas cada 30 días */
+.lg-cronograma {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 .45rem;
+  position: relative;
+}
+.lg-cronograma::before {
+  content: '';
+  position: absolute;
+  left: calc(.45rem + 6px);
+  top: 14px;
+  bottom: 14px;
+  width: 2px;
+  background: #33454f;
+}
+.lg-cuota {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: .9rem;
+  padding: .55rem 0;
+}
+.lg-punto {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--tinta);
+  border: 2px solid #5b6873;
+  flex: none;
+  position: relative;
+  z-index: 1;
+}
+.lg-cuota-dia { font-weight: 500; color: #fff; min-width: 4.5rem; }
+.lg-cuota-estado { font-size: .88rem; color: #9fb0bb; }
+
+.lg-pagada .lg-punto { background: #3fb59d; border-color: #3fb59d; }
+.lg-pagada .lg-cuota-estado { color: #7fd1c0; }
+.lg-proxima .lg-punto { border-color: #3fb59d; box-shadow: 0 0 0 4px rgba(63, 181, 157, .2); }
+.lg-proxima .lg-cuota-estado { color: #fff; }
+
+.lg-sedes { margin: 0; font-size: .85rem; color: #9fb0bb; }
+
+/* Panel del formulario */
+.lg-panel {
+  display: grid;
+  place-items: center;
+  padding: 2rem 1.5rem;
+  background: var(--superficie);
+}
+.lg-form { width: 100%; max-width: 380px; }
+.lg-form h1 { font-size: 1.75rem; margin-bottom: .35rem; }
+.lg-sub { margin-bottom: 1.75rem; }
+.lg-form .lg-logo-movil { display: none; }
+
+.lg-pass { position: relative; }
+.lg-pass input { padding-right: 5rem; }
+.lg-ver {
+  position: absolute;
+  right: .5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: 0;
+  padding: .3rem .5rem;
+  font: inherit;
+  font-size: .85rem;
+  font-weight: 500;
+  color: var(--acento);
+  cursor: pointer;
+  border-radius: 4px;
+}
+.lg-ver:hover { background: var(--acento-claro); }
+
+.lg-error {
+  display: block;
+  margin: 0 0 1rem;
+  padding: .65rem .85rem;
+  font-size: .92rem;
+  color: var(--error);
+  background: var(--error-claro);
+  border: 1px solid #f4c7c2;
+  border-radius: var(--radio);
+}
+
+.lg-enviar { padding: .8rem 1rem; }
+.lg-pie { margin: 1.25rem 0 0; }
+
+/* Móvil y tablet */
+@media (max-width: 860px) {
+  .lg-pagina { grid-template-columns: 1fr; }
+  .lg-marca { display: none; }
+  .lg-panel { align-items: start; padding-top: 3rem; }
+  .lg-form .lg-logo-movil { display: inline-flex; margin-bottom: 1.5rem; }
+}
+
+/* ---------- logo ---------- */
+.logo { display: inline-flex; align-items: center; gap: .65rem; }
+.logo-texto {
+  font-size: 1.6rem; font-weight: 600; letter-spacing: -.02em; color: var(--tinta);
+}
+.logo-claro .logo-texto { color: #fff; }

@@ -21,5 +21,10 @@ select id, 'Recepcionista de prueba', 'recepcionista'::rol_usuario
 from auth.users
 where email = 'recepcionista@gmail.com';
 
+insert into perfiles (id, nombre, rol)
+select id, 'Gerente General', 'gerente'::rol_usuario
+from auth.users
+where email = 'gerente@gmail.com';
+
 -- Verifica:
 select p.nombre, p.rol, u.email from perfiles p join auth.users u on u.id = p.id;

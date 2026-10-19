@@ -12,10 +12,18 @@ function sumarDias(iso, n) {
   return t.toISOString().slice(0, 10);
 }
 
+// Sistema francés (cuota fija) con interés compuesto. Replica el cálculo de
+// crear_prestamo() en la base de datos, incluido el redondeo:
+//   R = P · i·(1+i)^n / ((1+i)^n − 1)
+// tasa = % por periodo (30 = 30 % mensual); cada periodo dura 30 días.
 function calcular(monto, plazo, tasa, fechaIni) {
-  const interes = redondear((monto * tasa) / 100);
-  const total = redondear(monto + interes);
-  const cuota = redondear(total / plazo);
+  const i = tasa / 100;
+  const cuotaExacta = i === 0
+    ? monto / plazo
+    : (monto * i * Math.pow(1 + i, plazo)) / (Math.pow(1 + i, plazo) - 1);
+  const cuota = redondear(cuotaExacta);
+  const total = redondear(cuotaExacta * plazo);   // total a pagar
+  const interes = redondear(total - monto);       // interés total
   const cuotas = [];
   for (let i = 1; i <= plazo; i++) {
     cuotas.push({
@@ -46,12 +54,29 @@ export default function PrestamoNuevo() {
   const [guardando, setGuardando] = useState(false);
   const [creado, setCreado] = useState(null);
 
+  // Cupo diario del recepcionista: { aplica, limite, otorgado, disponible }
+  // (aplica = false para administrador y asesor, que no tienen este límite)
+  const [cupoDia, setCupoDia] = useState(null);
+
+  async function cargarCupoDia() {
+    const { data, error: eCupo } = await supabase.rpc('consultar_cupo_diario');
+    const f = Array.isArray(data) ? data[0] : data;
+    if (eCupo || !f) { setCupoDia(null); return; }
+    setCupoDia({
+      aplica: !!f.aplica,
+      limite: Number(f.limite),
+      otorgado: Number(f.otorgado_hoy),
+      disponible: Number(f.disponible_hoy),
+    });
+  }
+
   useEffect(() => {
     supabase.from('configuracion').select('clave, valor').then(({ data }) => {
       if (!data) return;
       const v = Object.fromEntries(data.map((r) => [r.clave, Number(r.valor)]));
       setConfig({ tasa: v.tasa_interes_pct ?? 30, tope: v.tope_capital_cliente ?? 10000 });
     });
+    cargarCupoDia();
   }, []);
 
   async function elegir(c) {
@@ -97,11 +122,21 @@ export default function PrestamoNuevo() {
   const excede = cliente && montoNum > disponible;
   const plan = datosValidos ? calcular(montoNum, plazoNum, config.tasa, fechaIni) : null;
 
+  // Cupo diario (solo aplica a recepcionistas)
+  const hayCupoDia = !!cupoDia?.aplica;
+  const excedeDia = hayCupoDia && montoNum > cupoDia.disponible;
+  const agotadoDia = hayCupoDia && cupoDia.disponible <= 0;
+  const pctUsado = hayCupoDia && cupoDia.limite > 0
+    ? Math.min(100, (cupoDia.otorgado / cupoDia.limite) * 100)
+    : 0;
+  const colorBarra = pctUsado >= 100 ? '#d32f2f' : pctUsado >= 80 ? '#ed6c02' : '#2e7d32';
+
   function validar() {
     if (!cliente) return 'Elige un cliente.';
     if (!(montoNum > 0)) return 'El monto debe ser mayor que cero.';
     if (redondear(montoNum) !== montoNum) return 'El monto admite hasta 2 decimales.';
-    if (excede) return `El monto supera el cupo disponible (${soles(disponible)}).`;
+    if (excede) return `El monto supera el cupo disponible del cliente (${soles(disponible)}).`;
+    if (excedeDia) return `El monto supera tu cupo diario disponible (${soles(cupoDia.disponible)}).`;
     if (!Number.isInteger(plazoNum) || plazoNum < 1 || plazoNum > 60)
       return 'El plazo debe ser un número entero de 1 a 60 meses.';
     if (!fechaIni) return 'Indica la fecha de otorgamiento.';
@@ -124,6 +159,7 @@ export default function PrestamoNuevo() {
     setGuardando(false);
 
     if (eRpc) {
+      cargarCupoDia(); // por si el cupo cambió mientras se llenaba el formulario
       return setError(
         eRpc.code === '42501' ? 'Tu rol no tiene permiso para registrar préstamos.' : eRpc.message
       );
@@ -135,6 +171,7 @@ export default function PrestamoNuevo() {
     const { data: primera } = await supabase
       .from('cuotas').select('monto, fecha_vencimiento')
       .eq('prestamo_id', data).order('numero').limit(1).single();
+    await cargarCupoDia(); // refresca el saldo diario tras el desembolso
     setCreado({ id: data, ...p, primera, cliente });
   }
 
@@ -161,13 +198,16 @@ export default function PrestamoNuevo() {
 
           <dl className="exito-datos">
             <div><dt>Capital</dt><dd>{soles(creado.monto_capital)}</dd></div>
-            <div><dt>Interés ({Number(creado.tasa_interes_pct)}%)</dt><dd>{soles(creado.monto_interes)}</dd></div>
+            <div><dt>Interés total</dt><dd>{soles(creado.monto_interes)}</dd></div>
             <div className="destacado"><dt>Total a pagar</dt><dd>{soles(creado.total_a_pagar)}</dd></div>
             <div><dt>Plazo</dt><dd>{creado.plazo_meses} {creado.plazo_meses === 1 ? 'mes' : 'meses'}</dd></div>
             <div><dt>Otorgado</dt><dd>{fecha(creado.fecha_otorgamiento)}</dd></div>
             {creado.primera && (
               <div><dt>Primera cuota</dt>
                 <dd>{soles(creado.primera.monto)} · {fecha(creado.primera.fecha_vencimiento)}</dd></div>
+            )}
+            {hayCupoDia && (
+              <div><dt>Cupo diario restante</dt><dd>{soles(cupoDia.disponible)}</dd></div>
             )}
           </dl>
 
@@ -187,10 +227,48 @@ export default function PrestamoNuevo() {
         <div>
           <h1>Registrar préstamo</h1>
           <p className="suave">
-            Interés del {config.tasa}% sobre el monto, en cuotas mensuales. Tope de {soles(config.tope)} por cliente.
+            Interés compuesto del {config.tasa}% mensual, con cuota fija (sistema francés). Tope de {soles(config.tope)} por cliente.
           </p>
         </div>
       </div>
+
+      {/* Cuadro de cupo diario: solo se muestra a recepcionistas */}
+      {hayCupoDia && (
+        <div className="tarjeta" style={{ marginBottom: 16 }} aria-live="polite">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 8 }}>
+            <div>
+              <span className="suave chico">Tu cupo para otorgar hoy</span>
+              <div style={{ fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.2 }}>
+                {soles(cupoDia.disponible)}
+              </div>
+            </div>
+            <span className="suave chico">
+              Otorgado hoy {soles(cupoDia.otorgado)} de {soles(cupoDia.limite)}
+            </span>
+          </div>
+
+          <div
+            role="progressbar"
+            aria-label="Cupo diario utilizado"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(pctUsado)}
+            style={{ height: 8, borderRadius: 4, background: 'rgba(128,128,128,.25)', overflow: 'hidden', marginTop: 12 }}
+          >
+            <div style={{ width: `${pctUsado}%`, height: '100%', background: colorBarra, transition: 'width .3s' }} />
+          </div>
+
+          {agotadoDia ? (
+            <p className="ayuda ayuda-error">
+              Alcanzaste tu límite diario. Podrás registrar nuevos préstamos mañana.
+            </p>
+          ) : montoNum > 0 && !excedeDia ? (
+            <p className="ayuda">
+              Después de este préstamo te quedarán {soles(cupoDia.disponible - montoNum)} de cupo hoy.
+            </p>
+          ) : null}
+        </div>
+      )}
 
       <form onSubmit={guardar} noValidate className="tarjeta">
         <section>
@@ -232,7 +310,7 @@ export default function PrestamoNuevo() {
               </div>
               <div className="cupo">
                 <span className="suave chico">Capital activo {soles(activo)}</span>
-                <strong>Cupo disponible {soles(disponible)}</strong>
+                <strong>Cupo del cliente {soles(disponible)}</strong>
               </div>
               <button type="button" className="btn btn-sec btn-auto btn-chico"
                 onClick={() => { setCliente(null); setActivo(0); }}>Cambiar</button>
@@ -258,7 +336,8 @@ export default function PrestamoNuevo() {
               <input id="fecha" type="date" value={fechaIni} onChange={(e) => setFechaIni(e.target.value)} />
             </div>
           </div>
-          {excede && <p className="ayuda ayuda-error">Supera el cupo disponible de {soles(disponible)}.</p>}
+          {excede && <p className="ayuda ayuda-error">Supera el cupo disponible del cliente: {soles(disponible)}.</p>}
+          {excedeDia && <p className="ayuda ayuda-error">Supera tu cupo diario disponible: {soles(cupoDia.disponible)}.</p>}
         </section>
 
         {plan && (
@@ -266,7 +345,7 @@ export default function PrestamoNuevo() {
             <h2>3. Vista previa del cronograma</h2>
             <div className="resumen resumen-3">
               <div className="resumen-item"><span className="suave chico">Capital</span><strong>{soles(montoNum)}</strong></div>
-              <div className="resumen-item"><span className="suave chico">Interés ({config.tasa}%)</span><strong>{soles(plan.interes)}</strong></div>
+              <div className="resumen-item"><span className="suave chico">Interés total</span><strong>{soles(plan.interes)}</strong></div>
               <div className="resumen-item"><span className="suave chico">Total a pagar</span><strong>{soles(plan.total)}</strong></div>
             </div>
             <div className="tabla-wrap">
@@ -285,7 +364,7 @@ export default function PrestamoNuevo() {
         {error && <div className="alerta alerta-error" role="alert">{error}</div>}
 
         <div className="acciones">
-          <button className="btn btn-auto" disabled={guardando || !datosValidos || excede}>
+          <button className="btn btn-auto" disabled={guardando || !datosValidos || excede || excedeDia}>
             {guardando ? 'Guardando…' : 'Registrar préstamo'}
           </button>
           <Link className="btn btn-sec btn-auto" to="/prestamos">Cancelar</Link>
